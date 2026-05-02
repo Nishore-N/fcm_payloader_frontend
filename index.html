@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FCM Payload Builder | Premium Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="loader" class="loader-wrapper">
+        <div class="loader-content">
+            <div class="loader-icon">
+                <i class="fas fa-paper-plane"></i>
+            </div>
+            <div class="loader-text">Initializing <span>FCM Payloader</span></div>
+            <div class="loader-bar">
+                <div class="loader-progress"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <header class="main-header">
+            <div class="logo">
+                <i class="fas fa-paper-plane"></i>
+                <h1>FCM <span>Payloader</span></h1>
+            </div>
+            <p>Design and deploy rich notification experiences</p>
+        </header>
+
+        <main class="content-grid">
+            <!-- Configuration Form -->
+            <section class="config-panel">
+                <div class="panel-header">
+                    <i class="fas fa-sliders-h"></i>
+                    <h2>Configuration</h2>
+                </div>
+                
+                <form id="payloadForm">
+                    <div class="form-section">
+                        <h3><i class="fas fa-info-circle"></i> Content</h3>
+                        <div class="grid-2-col">
+                            <div class="field">
+                                <label for="appName">Application Name <span class="required-star">*</span></label>
+                                <input type="text" id="appName" placeholder="e.g. WayTree" value="Application" required>
+                            </div>
+                            <div class="field" style="grid-column: span 2;">
+                                <label>Branding Mode <span class="required-star">*</span></label>
+                                <div class="toggle-group">
+                                    <label class="toggle-btn active" data-mode="text">
+                                        <input type="radio" name="iconMode" value="text" checked style="display:none">
+                                        <i class="fas fa-font"></i> Text Initials
+                                    </label>
+                                    <label class="toggle-btn" data-mode="image">
+                                        <input type="radio" name="iconMode" value="image" style="display:none">
+                                        <i class="fas fa-image"></i> Image Logo
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="field" id="iconTextField">
+                                <label for="appIconText">Icon Text (Short) <span class="required-star">*</span></label>
+                                <input type="text" id="appIconText" placeholder="e.g. WT" value="App" maxlength="4" required>
+                            </div>
+                            <div class="field" id="iconUrlField" style="display: none;">
+                                <label for="appIconUrl">App Icon URL <span class="required-star">*</span></label>
+                                <input type="url" id="appIconUrl" placeholder="https://logo.com/icon.png">
+                            </div>
+                        </div>
+                            <div class="field">
+                                <label for="title">Notification Title <span class="required-star">*</span></label>
+                                <input type="text" id="title" placeholder="e.g. New Event Starting!" required>
+                            </div>
+                        <div class="field">
+                            <label for="body">Message Body <span class="required-star">*</span></label>
+                            <textarea id="body" placeholder="Tell your users something interesting..." required></textarea>
+                        </div>
+                        <div class="field" id="imageFieldWrapper">
+                            <label for="imageUrl">Image URL (Optional)</label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-link"></i>
+                                <input type="url" id="imageUrl" placeholder="https://images.unsplash.com/photo...">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-paint-brush"></i> Visual Style</h3>
+                        <div class="grid-2-col">
+                            <div class="field">
+                                <label for="cardType">Card Layout</label>
+                                <select id="cardType">
+                                    <option value="1">Standard Card</option>
+                                    <option value="2">Image Banner</option>
+                                    <option value="3">Modern Compact</option>
+                                    <option value="4">Promotional</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label for="buttonType">Action Style</label>
+                                <select id="buttonType">
+                                    <option value="1">Solid Primary</option>
+                                    <option value="2">Outline Ghost</option>
+                                    <option value="3">Text Link</option>
+                                    <option value="4">Full Width</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid-2-col">
+                            <div class="field">
+                                <label for="buttonText">Button Text</label>
+                                <input type="text" id="buttonText" placeholder="View Details">
+                            </div>
+                            <div class="field">
+                                <label for="deepLink">Action Link</label>
+                                <input type="text" id="deepLink" placeholder="e.g. https://fuzionest.com/en">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-bullseye"></i> Delivery</h3>
+                        <div class="grid-2-col">
+                            <div class="field">
+                                <label for="targetType">Target By</label>
+                                <select id="targetType">
+                                    <option value="token">Device Token</option>
+                                    <option value="topic">Topic Name</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label for="triggerType">Schedule</label>
+                                <select id="triggerType">
+                                    <option value="instant">Send Now</option>
+                                    <option value="scheduled">Specific Time</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label for="target"><i class="fas fa-key"></i> Recipient Token <span class="required-star">*</span></label>
+                            <div id="targetContainer">
+                                <div class="target-input-wrapper">
+                                    <input type="text" class="target-input" placeholder="Paste unique device FCM token" required>
+                                    <button type="button" id="addTokenBtn" class="add-token-btn" title="Add another token">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="delayField" style="display: none;">
+                            <div class="grid-2-col">
+                                <div class="field">
+                                    <label for="scheduledDate"><i class="fas fa-calendar-alt"></i> Scheduled Date</label>
+                                    <div class="field-group">
+                                        <input type="date" id="scheduledDate">
+                                        <i class="fas fa-calendar-alt input-icon-end" onclick="document.getElementById('scheduledDate').showPicker()"></i>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <label for="scheduledTime"><i class="fas fa-clock"></i> Scheduled Time</label>
+                                    <div class="field-group">
+                                        <input type="time" id="scheduledTime">
+                                        <i class="fas fa-clock input-icon-end" onclick="document.getElementById('scheduledTime').showPicker()"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="submitBtn">
+                        <i class="fas fa-paper-plane"></i>
+                        <span>Send Push Notification</span>
+                    </button>
+                </form>
+            </section>
+
+            <!-- Live Preview -->
+            <section class="preview-panel">
+                <div class="panel-header">
+                    <i class="fas fa-eye"></i>
+                    <h2>Live Preview</h2>
+                </div>
+                
+                <div class="phone-mockup">
+                    <div class="phone-screen">
+                        <div class="phone-status-bar">
+                            <span>9:41</span>
+                            <div class="status-icons">
+                                <i class="fas fa-signal"></i>
+                                <i class="fas fa-wifi"></i>
+                                <i class="fas fa-battery-full"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="notification-container">
+                            <div id="previewCard" class="notification-card card-type-1">
+                                <div class="card-header">
+                                    <div class="app-info">
+                                        <div class="app-icon">App</div>
+                                        <span class="app-name">Application</span>
+                                    </div>
+                                    <span class="timestamp">now</span>
+                                    <div class="promo-badge" id="promoBadge">PROMO</div>
+                                </div>
+                                
+                                <div class="card-content-wrapper" id="previewContent">
+                                    <div class="banner-image-container" id="previewImageContainer">
+                                        <img id="previewImage" src="" alt="Preview">
+                                    </div>
+                                    
+                                    <div class="text-content">
+                                        <h4 id="previewTitle">Notification Title</h4>
+                                        <p id="previewBody">Your message will appear here. Start typing to see it change in real-time.</p>
+                                    </div>
+
+                                    <div class="side-image-container" id="previewSideImageContainer">
+                                        <img id="previewSideImage" src="" alt="Side Preview">
+                                    </div>
+                                </div>
+
+                                <div class="card-footer">
+                                    <button type="button" id="previewButton" class="btn-type-1">View Details</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="home-indicator"></div>
+                    </div>
+                </div>
+
+                <div id="status" class="status-message"></div>
+            </section>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
