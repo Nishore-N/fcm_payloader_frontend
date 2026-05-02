@@ -1,3 +1,6 @@
+// Configuration - Update this to your deployed Backend URL
+const BACKEND_URL = ''; // Leave empty if frontend and backend are on the same domain
+
 // Intro Animation & Loader Handling
 window.addEventListener('load', () => {
     const loader = document.getElementById('loader');
@@ -408,7 +411,7 @@ form.addEventListener('submit', async (e) => {
     }
 
     try {
-        const response = await fetch('/api/send-notification', {
+        const response = await fetch(`${BACKEND_URL}/api/send-notification`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
