@@ -1,5 +1,5 @@
 // Configuration - Update this to your deployed Backend URL
-const BACKEND_URL = ''; // Leave empty if frontend and backend are on the same domain
+const BACKEND_URL = 'https://fcm-payloader-backend.onrender.com'; // Deployed Render Backend URL
 
 // Intro Animation & Loader Handling
 window.addEventListener('load', () => {
