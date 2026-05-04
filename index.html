@@ -44,7 +44,7 @@
                         <div class="grid-2-col">
                             <div class="field">
                                 <label for="appName">Application Name <span class="required-star">*</span></label>
-                                <input type="text" id="appName" placeholder="e.g. WayTree" value="Application" required>
+                                <input type="text" id="appName" placeholder="Fetching from app..." readonly required>
                             </div>
                             <div class="field" style="grid-column: span 2;">
                                 <label>Branding Mode <span class="required-star">*</span></label>
@@ -61,7 +61,7 @@
                             </div>
                             <div class="field" id="iconTextField">
                                 <label for="appIconText">Icon Text (Short) <span class="required-star">*</span></label>
-                                <input type="text" id="appIconText" placeholder="e.g. WT" value="App" maxlength="4" required>
+                                <input type="text" id="appIconText" placeholder="Auto-generated" maxlength="4" readonly required>
                             </div>
                             <div class="field" id="iconUrlField" style="display: none;">
                                 <label for="appIconUrl">App Icon URL <span class="required-star">*</span></label>
@@ -70,11 +70,24 @@
                         </div>
                             <div class="field">
                                 <label for="title">Notification Title <span class="required-star">*</span></label>
-                                <input type="text" id="title" placeholder="e.g. New Event Starting!" required>
+                                <div class="input-with-counter">
+                                    <input type="text" id="title" placeholder="e.g. New Event Starting!" required maxlength="65">
+                                    <span class="char-count" id="titleCount">0 / 65</span>
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label for="subtitle">Notification Subtitle (Optional)</label>
+                                <div class="input-with-counter">
+                                    <input type="text" id="subtitle" placeholder="e.g. Don't miss out on this..." maxlength="120">
+                                    <span class="char-count" id="subtitleCount">0 / 120</span>
+                                </div>
                             </div>
                         <div class="field">
                             <label for="body">Message Body <span class="required-star">*</span></label>
-                            <textarea id="body" placeholder="Tell your users something interesting..." required></textarea>
+                            <div class="input-with-counter">
+                                <textarea id="body" placeholder="Tell your users something interesting..." required maxlength="600"></textarea>
+                                <span class="char-count" id="bodyCount">0 / 600</span>
+                            </div>
                         </div>
                         <div class="field" id="imageFieldWrapper">
                             <label for="imageUrl">Image URL (Optional)</label>
@@ -87,41 +100,41 @@
 
                     <div class="form-section">
                         <h3><i class="fas fa-paint-brush"></i> Visual Style</h3>
-                        <div class="grid-2-col">
-                            <div class="field">
-                                <label for="cardType">Card Layout</label>
-                                <select id="cardType">
-                                    <option value="1">Standard Card</option>
-                                    <option value="2">Image Banner</option>
-                                    <option value="3">Modern Compact</option>
-                                    <option value="4">Promotional</option>
-                                </select>
-                            </div>
-                            <div class="field">
-                                <label for="buttonType">Action Style</label>
-                                <select id="buttonType">
-                                    <option value="1">Solid Primary</option>
-                                    <option value="2">Outline Ghost</option>
-                                    <option value="3">Text Link</option>
-                                    <option value="4">Full Width</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="grid-2-col">
-                            <div class="field">
-                                <label for="buttonText">Button Text</label>
-                                <input type="text" id="buttonText" placeholder="View Details">
-                            </div>
-                            <div class="field">
-                                <label for="deepLink">Action Link</label>
-                                <input type="text" id="deepLink" placeholder="e.g. https://fuzionest.com/en">
-                            </div>
+                        <div class="field">
+                            <label for="cardType">Card Layout <span class="required-star">*</span></label>
+                            <select id="cardType">
+                                <option value="1">Standard Card</option>
+                                <option value="2">Image Banner</option>
+                                <option value="3">Modern Compact</option>
+                                <option value="4">Promotional</option>
+                            </select>
                         </div>
                     </div>
 
                     <div class="form-section">
+                        <div class="section-header-with-action">
+                            <h3><i class="fas fa-mouse-pointer"></i> Action Buttons</h3>
+                            <button type="button" id="addActionButton" class="btn-add-mini" title="Add Action Button">
+                                <i class="fas fa-plus"></i> Add Button
+                            </button>
+                        </div>
+                        <div id="buttonsContainer" class="buttons-dynamic-list">
+                            <!-- Buttons will be added here dynamically -->
+                        </div>
+                        <p class="field-hint" id="noButtonsHint">No buttons added. Click "+ Add Button" to create action buttons.</p>
+                    </div>
+
+                    <div class="form-section">
                         <h3><i class="fas fa-bullseye"></i> Delivery</h3>
-                        <div class="grid-2-col">
+                        <div class="grid-3-col">
+                            <div class="field">
+                                <label for="notificationType">Notification Type</label>
+                                <select id="notificationType">
+                                    <option value="notification">App Notification</option>
+                                    <option value="in_app">In-App Message</option>
+                                    <option value="both" selected>Both (Recommended)</option>
+                                </select>
+                            </div>
                             <div class="field">
                                 <label for="targetType">Target By</label>
                                 <select id="targetType">
@@ -178,8 +191,10 @@
             <!-- Live Preview -->
             <section class="preview-panel">
                 <div class="panel-header">
-                    <i class="fas fa-eye"></i>
-                    <h2>Live Preview</h2>
+                    <div class="header-left">
+                        <i class="fas fa-eye"></i>
+                        <h2>Live Preview</h2>
+                    </div>
                 </div>
                 
                 <div class="phone-mockup">
@@ -192,35 +207,83 @@
                                 <i class="fas fa-battery-full"></i>
                             </div>
                         </div>
+
+                        <!-- Switcher Inside Phone -->
+                        <div class="phone-tabs">
+                            <button class="phone-tab-btn active" data-tab="push">
+                                <i class="fas fa-bell"></i>
+                            </button>
+                            <button class="phone-tab-btn" data-tab="inapp">
+                                <i class="fas fa-mobile-alt"></i>
+                            </button>
+                        </div>
                         
-                        <div class="notification-container">
-                            <div id="previewCard" class="notification-card card-type-1">
-                                <div class="card-header">
-                                    <div class="app-info">
-                                        <div class="app-icon">App</div>
-                                        <span class="app-name">Application</span>
-                                    </div>
-                                    <span class="timestamp">now</span>
-                                    <div class="promo-badge" id="promoBadge">PROMO</div>
-                                </div>
-                                
-                                <div class="card-content-wrapper" id="previewContent">
-                                    <div class="banner-image-container" id="previewImageContainer">
-                                        <img id="previewImage" src="" alt="Preview">
+                        <!-- Push Notification Preview -->
+                        <div id="pushPreview" class="preview-container active">
+                            <div class="notification-container top-align">
+                                <div class="notification-card card-type-1 preview-card-ref">
+                                    <div class="card-header">
+                                        <div class="app-info">
+                                            <div class="app-icon preview-app-icon">App</div>
+                                            <span class="app-name preview-app-name">Application</span>
+                                        </div>
+                                        <div class="promo-badge preview-promo-badge">PROMO</div>
                                     </div>
                                     
-                                    <div class="text-content">
-                                        <h4 id="previewTitle">Notification Title</h4>
-                                        <p id="previewBody">Your message will appear here. Start typing to see it change in real-time.</p>
+                                    <div class="card-content-wrapper preview-content-wrapper">
+                                        <div class="banner-image-container preview-image-container">
+                                            <img class="preview-main-image" src="" alt="Preview">
+                                        </div>
+                                        
+                                        <div class="text-content">
+                                            <h4 class="preview-title-ref">Notification Title</h4>
+                                            <div class="preview-subtitle-ref" style="display: none;">Notification Subtitle</div>
+                                            <p class="preview-body-ref">Your message will appear here. Start typing to see it change in real-time.</p>
+                                        </div>
+
+                                        <div class="side-image-container preview-side-image-container">
+                                            <img class="preview-side-image-ref" src="" alt="Side Preview">
+                                        </div>
                                     </div>
 
-                                    <div class="side-image-container" id="previewSideImageContainer">
-                                        <img id="previewSideImage" src="" alt="Side Preview">
+                                    <div class="card-footer preview-button-container-ref">
+                                        <!-- Buttons will be rendered here dynamically -->
                                     </div>
                                 </div>
+                            </div>
+                        </div>
 
-                                <div class="card-footer">
-                                    <button type="button" id="previewButton" class="btn-type-1">View Details</button>
+                        <!-- In-App Message Preview (Same Card, Centered) -->
+                        <div id="inappPreview" class="preview-container">
+                            <div class="notification-container center-align">
+                                <div class="notification-card card-type-1 preview-card-ref">
+                                    <div class="card-header">
+                                        <div class="app-info">
+                                            <div class="app-icon preview-app-icon">App</div>
+                                            <span class="app-name preview-app-name">Application</span>
+                                        </div>
+                                        <div class="promo-badge preview-promo-badge">PROMO</div>
+                                    </div>
+                                    
+                                    <div class="card-content-wrapper preview-content-wrapper">
+                                        <div class="banner-image-container preview-image-container">
+                                            <img class="preview-main-image" src="" alt="Preview">
+                                        </div>
+                                        
+                                        <div class="text-content">
+                                            <h4 class="preview-title-ref">Notification Title</h4>
+                                            <div class="preview-subtitle-ref" style="display: none;">Notification Subtitle</div>
+                                            <p class="preview-body-ref">Your message will appear here. Start typing to see it change in real-time.</p>
+                                        </div>
+
+                                        <div class="side-image-container preview-side-image-container">
+                                            <img class="preview-side-image-ref" src="" alt="Side Preview">
+                                        </div>
+                                    </div>
+
+                                    <div class="card-footer preview-button-container-ref">
+                                        <!-- Buttons will be rendered here dynamically -->
+                                    </div>
                                 </div>
                             </div>
                         </div>

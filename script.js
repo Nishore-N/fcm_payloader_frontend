@@ -1,5 +1,21 @@
-// Configuration - Update this to your deployed Backend URL
-const BACKEND_URL = 'https://fcm-payloader-backend.onrender.com'; // Deployed Render Backend URL
+// Configuration - Automatically detects if running locally or on Render
+// Configuration - Automatically detects if running locally or on Render
+const isLocal = window.location.hostname === 'localhost' || 
+                window.location.hostname === '127.0.0.1' || 
+                window.location.hostname.startsWith('192.168.') || 
+                window.location.hostname.startsWith('10.') || 
+                window.location.hostname.endsWith('.local');
+
+// Dynamic Limits Configuration
+const LIMITS = {
+    in_app: { title: 25, subtitle: 50, body: 600 },
+    notification: { title: 12, subtitle: 25, body: 200 },
+    both: { title: 12, subtitle: 25, body: 200 }
+};
+
+const BACKEND_URL = isLocal 
+    ? window.location.origin 
+    : 'https://fcm-payloader-backend.onrender.com';
 
 // Intro Animation & Loader Handling
 window.addEventListener('load', () => {
@@ -11,6 +27,7 @@ window.addEventListener('load', () => {
         loader.classList.add('fade-out');
         appContainer.classList.add('visible');
         initInteractions();
+        fetchAppInfo(); // Fetch app info from backend
     }, 1500);
 });
 
@@ -23,9 +40,6 @@ function initInteractions() {
         'body': 'fa-envelope-open-text',
         'imageUrl': 'fa-link',
         'cardType': 'fa-layer-group',
-        'buttonType': 'fa-mouse-pointer',
-        'buttonText': 'fa-i-cursor',
-        'deepLink': 'fa-external-link-alt',
         'targetType': 'fa-users',
         'target': 'fa-key',
         'scheduledDate': 'fa-calendar-alt',
@@ -60,6 +74,46 @@ function spawnPop(x, y, iconClass) {
     setTimeout(() => pop.remove(), 1000);
 }
 
+async function fetchAppInfo() {
+    try {
+        const response = await fetch(`${BACKEND_URL}/api/app-info`);
+        if (!response.ok) throw new Error('Failed to fetch app info');
+        
+        const data = await response.json();
+        
+        const appNameInput = document.getElementById('appName');
+        const appIconTextInput = document.getElementById('appIconText');
+        
+        if (data.appName) {
+            appNameInput.value = data.appName;
+            console.log(`App Name synchronized: ${data.appName} (${data.source})`);
+            
+            // Also update any labels or placeholders if needed
+            appNameInput.placeholder = data.appName;
+        } else {
+            console.warn('App info fetched but appName was empty');
+            appNameInput.value = 'Application'; 
+        }
+        
+        if (data.appIconText) {
+            appIconTextInput.value = data.appIconText;
+        } else {
+            appIconTextInput.value = 'App';
+        }
+        
+        // Refresh preview with new data
+        updatePreview();
+        
+    } catch (error) {
+        console.error('Error fetching app info, using fallback:', error);
+        const appNameInput = document.getElementById('appName');
+        const appIconTextInput = document.getElementById('appIconText');
+        if (appNameInput) appNameInput.value = 'Application';
+        if (appIconTextInput) appIconTextInput.value = 'App';
+        updatePreview();
+    }
+}
+
 // Elements
 const form = document.getElementById('payloadForm');
 const triggerType = document.getElementById('triggerType');
@@ -72,105 +126,317 @@ const iconUrlField = document.getElementById('iconUrlField');
 const toggleButtons = document.querySelectorAll('.toggle-btn');
 const cardTypeSelect = document.getElementById('cardType');
 
-// Preview Elements
-const previewTitle = document.getElementById('previewTitle');
-const previewBody = document.getElementById('previewBody');
-const previewImage = document.getElementById('previewImage');
-const previewSideImage = document.getElementById('previewSideImage');
-const previewButton = document.getElementById('previewButton');
-const previewCard = document.getElementById('previewCard');
-const previewContent = document.getElementById('previewContent');
+// State for Dynamic Buttons
+let actionButtons = [];
 
-const previewAppName = document.querySelectorAll('.app-name');
-const previewAppIcon = document.querySelectorAll('.app-icon');
+// Preview Containers & Tabs
+const tabButtons = document.querySelectorAll('.phone-tab-btn');
+const previewContainers = document.querySelectorAll('.preview-container');
 
 // Input Listeners for Live Preview
-const inputs = ['title', 'body', 'imageUrl', 'buttonText', 'cardType', 'buttonType', 'appName', 'appIconText', 'appIconUrl'];
+const inputs = ['title', 'body', 'imageUrl', 'cardType', 'appName', 'appIconText', 'appIconUrl', 'notificationType', 'subtitle'];
 inputs.forEach(id => {
-    document.getElementById(id).addEventListener('input', updatePreview);
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', updatePreview);
 });
+
+// Tab Switching
+tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        switchTab(tab);
+    });
+});
+
+function switchTab(tab) {
+    // Update Buttons
+    tabButtons.forEach(b => {
+        b.classList.toggle('active', b.dataset.tab === tab);
+    });
+    
+    // Update Containers
+    previewContainers.forEach(container => {
+        container.classList.toggle('active', container.id === `${tab}Preview`);
+    });
+
+    // Re-run updatePreview to ensure the newly visible tab is populated correctly
+    updatePreview();
+}
+
+// Sync Tabs with Notification Type
+const notificationTypeSelect = document.getElementById('notificationType');
+notificationTypeSelect.addEventListener('change', syncPreviewTabs);
+
+function syncPreviewTabs() {
+    const type = notificationTypeSelect.value;
+    const pushTabBtn = document.querySelector('.phone-tab-btn[data-tab="push"]');
+    const inappTabBtn = document.querySelector('.phone-tab-btn[data-tab="inapp"]');
+    
+    // Get new limits
+    const newLimits = LIMITS[type] || LIMITS.both;
+    
+    // Auto-Truncate content to safe buffers
+    const titleField = document.getElementById('title');
+    const subtitleField = document.getElementById('subtitle');
+    const bodyField = document.getElementById('body');
+
+    if (titleField.value.length > newLimits.title) {
+        titleField.value = titleField.value.substring(0, newLimits.title);
+    }
+    if (subtitleField.value.length > newLimits.subtitle) {
+        subtitleField.value = subtitleField.value.substring(0, newLimits.subtitle);
+    }
+    if (bodyField.value.length > newLimits.body) {
+        bodyField.value = bodyField.value.substring(0, newLimits.body);
+    }
+
+    if (type === 'notification') {
+        pushTabBtn.style.display = 'flex';
+        inappTabBtn.style.display = 'none';
+        switchTab('push');
+    } else if (type === 'in_app') {
+        pushTabBtn.style.display = 'none';
+        inappTabBtn.style.display = 'flex';
+        switchTab('inapp');
+    } else {
+        pushTabBtn.style.display = 'flex';
+        inappTabBtn.style.display = 'flex';
+    }
+    
+    updatePreview(); // Refresh UI and counters
+}
+
+// Dynamic Button Management
+const addActionButton = document.getElementById('addActionButton');
+const buttonsContainer = document.getElementById('buttonsContainer');
+const noButtonsHint = document.getElementById('noButtonsHint');
+
+addActionButton.addEventListener('click', () => {
+    if (actionButtons.length >= 4) {
+        alert('Maximum 4 buttons allowed for optimal display.');
+        return;
+    }
+    
+    // Collapse all existing buttons when adding a new one
+    actionButtons.forEach(b => b.isExpanded = false);
+    
+    const id = Date.now();
+    const newButton = {
+        id: id,
+        text: 'View Details',
+        style: '1',
+        actionType: 'link',
+        actionValue: '',
+        isExpanded: true // New button starts expanded
+    };
+    
+    actionButtons.push(newButton);
+    renderButtonFormItems();
+    updatePreview();
+});
+
+function renderButtonFormItems() {
+    buttonsContainer.innerHTML = '';
+    noButtonsHint.style.display = actionButtons.length === 0 ? 'block' : 'none';
+    
+    actionButtons.forEach((btn, index) => {
+        const item = document.createElement('div');
+        item.className = `button-item ${btn.isExpanded ? '' : 'collapsed'}`;
+        item.innerHTML = `
+            <div class="button-item-header" data-id="${btn.id}">
+                <div class="button-header-left">
+                    <i class="fas fa-chevron-down btn-toggle-collapse"></i>
+                    <span>Button ${index + 1}: <small>${btn.text}</small></span>
+                </div>
+                <button type="button" class="btn-remove-mini" data-id="${btn.id}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            <div class="button-item-body">
+                <div class="grid-2-col">
+                    <div class="field">
+                        <label>Label</label>
+                        <input type="text" class="btn-text-input" data-id="${btn.id}" value="${btn.text}" placeholder="e.g. View Details">
+                    </div>
+                    <div class="field">
+                        <label>UI Style</label>
+                        <select class="btn-style-input" data-id="${btn.id}">
+                            <option value="1" ${btn.style === '1' ? 'selected' : ''}>Solid Primary</option>
+                            <option value="2" ${btn.style === '2' ? 'selected' : ''}>Outline Ghost</option>
+                            <option value="3" ${btn.style === '3' ? 'selected' : ''}>Text Link</option>
+                            <option value="4" ${btn.style === '4' ? 'selected' : ''}>Full Width</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid-2-col">
+                    <div class="field">
+                        <label>Action Type</label>
+                        <select class="btn-action-type-input" data-id="${btn.id}">
+                            <option value="link" ${btn.actionType === 'link' ? 'selected' : ''}>External Link</option>
+                            <option value="route" ${btn.actionType === 'route' ? 'selected' : ''}>App Route</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Action Value</label>
+                        <input type="text" class="btn-action-value-input" data-id="${btn.id}" value="${btn.actionValue}" placeholder="${btn.actionType === 'link' ? 'https://...' : 'e.g. event_details'}">
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        buttonsContainer.appendChild(item);
+        
+        // Add Listeners
+        const header = item.querySelector('.button-item-header');
+        const trashBtn = item.querySelector('.btn-remove-mini');
+        
+        // Toggle Collapse on Header Click
+        header.addEventListener('click', (e) => {
+            // Don't toggle if trash button is clicked
+            if (e.target.closest('.btn-remove-mini')) return;
+            
+            btn.isExpanded = !btn.isExpanded;
+            item.classList.toggle('collapsed', !btn.isExpanded);
+        });
+
+        trashBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            actionButtons = actionButtons.filter(b => b.id !== btn.id);
+            renderButtonFormItems();
+            updatePreview();
+        });
+        
+        item.querySelector('.btn-text-input').addEventListener('input', (e) => {
+            btn.text = e.target.value;
+            updatePreview();
+        });
+        
+        item.querySelector('.btn-style-input').addEventListener('change', (e) => {
+            btn.style = e.target.value;
+            updatePreview();
+        });
+        
+        item.querySelector('.btn-action-type-input').addEventListener('change', (e) => {
+            btn.actionType = e.target.value;
+            const valInput = item.querySelector('.btn-action-value-input');
+            valInput.placeholder = btn.actionType === 'link' ? 'https://...' : 'e.g. event_details';
+            updatePreview();
+        });
+        
+        item.querySelector('.btn-action-value-input').addEventListener('input', (e) => {
+            btn.actionValue = e.target.value;
+            updatePreview();
+        });
+    });
+}
 
 // Initial update
+syncPreviewTabs();
 updatePreview();
 
-// Preview Action Redirect
-previewButton.addEventListener('click', () => {
-    const deepLink = document.getElementById('deepLink').value;
-    if (deepLink) {
-        if (deepLink.startsWith('http://') || deepLink.startsWith('https://')) {
-            window.open(deepLink, '_blank');
-        } else {
-            // Handle as deep link (alert for demo purposes in web preview)
-            alert(`Deep Link Triggered: ${deepLink}\n(On a mobile device, this would open the specific app screen)`);
-        }
-    }
-});
+// Preview Click Simulation logic moved to updatePreview for dynamic buttons
 
 let hintTimeout;
 function updatePreview() {
-    const title = document.getElementById('title').value || 'Notification Title';
-    const body = document.getElementById('body').value || 'Your message will appear here. Start typing to see it change in real-time.';
+    const rawTitle = document.getElementById('title').value;
+    const rawSubtitle = document.getElementById('subtitle').value;
+    const rawBody = document.getElementById('body').value;
+    
+    const title = rawTitle || 'Notification Title';
+    const subtitle = rawSubtitle;
+    const body = rawBody || 'Your message will appear here. Start typing to see it change in real-time.';
     const imageUrl = document.getElementById('imageUrl').value;
-    const buttonText = document.getElementById('buttonText').value || 'View Details';
     const cardTypeVal = document.getElementById('cardType').value;
-    const buttonTypeVal = document.getElementById('buttonType').value;
     const appNameVal = document.getElementById('appName').value || 'Application';
     const appIconTextVal = document.getElementById('appIconText').value || 'App';
     const appIconUrlVal = document.getElementById('appIconUrl').value;
     const iconMode = document.querySelector('input[name="iconMode"]:checked').value;
+    const type = document.getElementById('notificationType').value;
 
-    const previewTitle = document.getElementById('previewTitle');
+    // 1. Update Counters (Using Raw Values)
+    const currentLimits = LIMITS[type] || LIMITS.both;
+    document.getElementById('titleCount').textContent = `${rawTitle.length} / ${currentLimits.title}`;
+    document.getElementById('subtitleCount').textContent = `${rawSubtitle.length} / ${currentLimits.subtitle}`;
+    document.getElementById('bodyCount').textContent = `${rawBody.length} / ${currentLimits.body}`;
+    updateCounterColor('titleCount', rawTitle.length, currentLimits.title);
+    updateCounterColor('subtitleCount', rawSubtitle.length, currentLimits.subtitle);
+    updateCounterColor('bodyCount', rawBody.length, currentLimits.body);
 
-    // Update text
-    previewTitle.textContent = title;
-    previewBody.textContent = body;
-    previewButton.textContent = buttonText;
-    
-    const isCentered = cardTypeVal === '1' || cardTypeVal === '4';
-    const alignStyle = isCentered ? 'center' : 'left';
-    
-    // Apply alignment to preview container
-    previewCard.style.textAlign = alignStyle;
-    previewContent.style.alignItems = isCentered ? 'center' : 'flex-start';
-    previewButton.style.alignSelf = isCentered ? 'center' : 'flex-start';
-
-    // Handle Background: Clear any inline background to allow CSS class to take over
-    previewCard.style.background = '';
-
-    // Update Branding in Preview
-    document.querySelectorAll('.app-name').forEach(el => el.textContent = appNameVal);
-    document.querySelectorAll('.app-icon').forEach(el => {
-        if (iconMode === 'image' && appIconUrlVal) {
-            el.innerHTML = `<img src="${appIconUrlVal}" style="width:100%; height:100%; object-fit:cover; border-radius:inherit;">`;
+    // 2. Sync All Cards (Push and In-App)
+    const cards = document.querySelectorAll('.preview-card-ref');
+    cards.forEach(card => {
+        card.className = `notification-card card-type-${cardTypeVal} preview-card-ref`;
+        
+        // Text Content
+        card.querySelector('.preview-title-ref').textContent = title;
+        card.querySelector('.preview-body-ref').textContent = body;
+        card.querySelector('.preview-body-ref').style.textAlign = 'justify';
+        
+        const subtitleEl = card.querySelector('.preview-subtitle-ref');
+        if (subtitle) {
+            subtitleEl.textContent = subtitle;
+            subtitleEl.style.display = 'block';
+            subtitleEl.style.textAlign = 'center';
+            subtitleEl.style.fontSize = '0.8rem';
+            subtitleEl.style.fontStyle = 'italic';
+            subtitleEl.style.color = 'inherit';
+            subtitleEl.style.opacity = '0.7';
         } else {
-            el.innerHTML = '';
-            el.textContent = appIconTextVal;
+            subtitleEl.style.display = 'none';
+        }
+
+        // Branding
+        card.querySelector('.preview-app-name').textContent = appNameVal;
+        const iconEl = card.querySelector('.preview-app-icon');
+        if (iconMode === 'image' && appIconUrlVal) {
+            iconEl.innerHTML = `<img src="${appIconUrlVal}" style="width:100%; height:100%; object-fit:cover; border-radius:inherit;">`;
+        } else {
+            iconEl.innerHTML = '';
+            iconEl.textContent = appIconTextVal;
+        }
+
+        // Images
+        const mainImg = card.querySelector('.preview-main-image');
+        const sideImg = card.querySelector('.preview-side-image-ref');
+        const mainImgContainer = card.querySelector('.preview-image-container');
+        const sideImgContainer = card.querySelector('.preview-side-image-container');
+
+        if (imageUrl) {
+            mainImg.src = imageUrl;
+            sideImg.src = imageUrl;
+        } else {
+            const fallback = 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?auto=format&fit=crop&w=400&q=80';
+            mainImg.src = fallback;
+            sideImg.src = fallback;
+        }
+
+        // Visibility based on card type
+        mainImgContainer.style.display = (cardTypeVal === '2' || cardTypeVal === '3') ? 'block' : 'none';
+        sideImgContainer.style.display = (cardTypeVal === '3') ? 'block' : 'none';
+        card.querySelector('.preview-promo-badge').style.display = cardTypeVal === '4' ? 'block' : 'none';
+
+        // Buttons
+        const btnContainer = card.querySelector('.preview-button-container-ref');
+        btnContainer.innerHTML = '';
+        if (actionButtons.length > 0) {
+            btnContainer.style.display = 'flex';
+            btnContainer.className = 'card-footer preview-button-container-ref';
+            if (actionButtons.length > 1) btnContainer.classList.add('row-layout');
+
+            actionButtons.forEach(btn => {
+                const pBtn = document.createElement('button');
+                pBtn.type = 'button';
+                pBtn.className = `btn-type-${btn.style}`;
+                pBtn.textContent = btn.text;
+                btnContainer.appendChild(pBtn);
+            });
+        } else {
+            btnContainer.style.display = 'none';
         }
     });
 
-    // Update Card Type Class
-    previewCard.className = `notification-card card-type-${cardTypeVal}`;
-
-    // Update Image Field Visibility (Only show for Type 2 and Type 3)
-    if (cardTypeVal === '2' || cardTypeVal === '3') {
-        imageFieldWrapper.style.display = 'block';
-    } else {
-        imageFieldWrapper.style.display = 'none';
-    }
-
-    // Update Images
-    if (imageUrl) {
-        previewImage.src = imageUrl;
-        previewSideImage.src = imageUrl;
-        // The display logic is handled by CSS based on card-type class
-    } else {
-        // Fallback or hide
-        previewImage.src = 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?auto=format&fit=crop&w=400&q=80';
-        previewSideImage.src = 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?auto=format&fit=crop&w=400&q=80';
-    }
-
-    // Update Button Type Class
-    previewButton.className = `btn-type-${buttonTypeVal}`;
+    // 3. UI Field Visibility
+    imageFieldWrapper.style.display = (cardTypeVal === '2' || cardTypeVal === '3') ? 'block' : 'none';
 }
 
 // Toggle Delay Field
@@ -366,15 +632,20 @@ form.addEventListener('submit', async (e) => {
 
     const data = {
         title: document.getElementById('title').value,
+        subtitle: document.getElementById('subtitle').value,
         body: document.getElementById('body').value,
         imageUrl: (cardTypeSelect.value === '2' || cardTypeSelect.value === '3') ? document.getElementById('imageUrl').value : '',
         cardType: cardTypeSelect.value,
-        buttonType: document.getElementById('buttonType').value,
-        buttonText: document.getElementById('buttonText').value,
         appName: document.getElementById('appName').value,
         appIconText: document.querySelector('input[name="iconMode"]:checked').value === 'text' ? document.getElementById('appIconText').value : '',
         appIconUrl: document.querySelector('input[name="iconMode"]:checked').value === 'image' ? document.getElementById('appIconUrl').value : '',
-        deepLink: document.getElementById('deepLink').value,
+        buttons: actionButtons.map(b => ({
+            text: b.text,
+            style: b.style,
+            type: b.actionType,
+            value: b.actionValue
+        })),
+        notificationType: document.getElementById('notificationType').value,
         targetType: targetTypeVal,
         target: targetTypeVal === 'topic' ? targetValues[0] : targetValues, // Single string for topic, array for tokens
         triggerType: document.getElementById('triggerType').value,
@@ -464,4 +735,57 @@ form.addEventListener('submit', async (e) => {
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalBtnText;
     }
+});
+
+function updateDynamicLimits() {
+    const type = document.getElementById('notificationType').value;
+    const currentLimits = LIMITS[type] || LIMITS.both;
+    
+    const fields = {
+        title: document.getElementById('title'),
+        subtitle: document.getElementById('subtitle'),
+        body: document.getElementById('body')
+    };
+    
+    // Update maxlength and truncate if necessary
+    fields.title.maxLength = currentLimits.title;
+    if (fields.title.value.length > currentLimits.title) {
+        fields.title.value = fields.title.value.substring(0, currentLimits.title);
+    }
+
+    fields.subtitle.maxLength = currentLimits.subtitle;
+    if (fields.subtitle.value.length > currentLimits.subtitle) {
+        fields.subtitle.value = fields.subtitle.value.substring(0, currentLimits.subtitle);
+    }
+
+    fields.body.maxLength = currentLimits.body;
+    if (fields.body.value.length > currentLimits.body) {
+        fields.body.value = fields.body.value.substring(0, currentLimits.body);
+    }
+    
+    // Update counter labels (will be updated by updatePreview)
+    updatePreview();
+}
+
+// Add listener for type change
+document.getElementById('notificationType').addEventListener('change', updateDynamicLimits);
+
+// Initial limits setup
+updateDynamicLimits();
+
+function updateCounterColor(id, length, max) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (length >= max) {
+        el.style.color = '#ef4444'; // error red
+    } else if (length >= max * 0.8) {
+        el.style.color = '#f59e0b'; // warning yellow
+    } else {
+        el.style.color = 'var(--text-dim)';
+    }
+}
+
+// Add event listeners for counters
+['title', 'subtitle', 'body'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updatePreview);
 });
